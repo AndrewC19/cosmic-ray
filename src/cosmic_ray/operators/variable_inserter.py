@@ -1,10 +1,11 @@
 """Implementation of the variable-inserter operator."""
 import random
-
 import parso.python.tree
 
-from .operator import Operator
 from parso.python.tree import Name, PythonNode
+
+from .operator import Operator
+from .example import Example
 
 
 class VariableInserter(Operator):
@@ -19,13 +20,14 @@ class VariableInserter(Operator):
            mutated to introduce an effect of the cause variable.
         """
         if isinstance(node, PythonNode) and (node.type == "arith_expr" or node.type == "term"):
-            expr_node = node.search_ancestor('expr_stmt')
-            if expr_node:
-                effect_variable_names = [v.value for v in expr_node.get_defined_names()]
-                if self.effect_variable in effect_variable_names:
-                    cause_variables = list(self._get_causes_from_expr_node(expr_node))
-                    if node not in cause_variables:
-                        yield (node.start_pos, node.end_pos)
+            if node.get_previous_sibling() == '=':  # We only want to mutate the LHS once
+                expr_node = node.search_ancestor('expr_stmt')
+                if expr_node:
+                    effect_variable_names = [v.value for v in expr_node.get_defined_names()]
+                    if self.effect_variable in effect_variable_names:
+                        cause_variables = list(self._get_causes_from_expr_node(expr_node))
+                        if node not in cause_variables:
+                            yield (node.start_pos, node.end_pos)
 
     def mutate(self, node, index):
         """Join the node with cause variable using a randomly sampled arithmetic operator."""
@@ -64,9 +66,9 @@ class VariableInserter(Operator):
     @classmethod
     def examples(cls):
         return (
-            # for cause_variable='j', effect_variable='y
-            ('y = x + z', 'y = x + z * j'),
-            # for cause_variable='x' and effect_variable='j'
-            ('j = x + z\ny = x + z', 'j = x + z + x\ny = x + z'),
+            Example('y = x + z', 'y = x + z * j',
+                    operator_args={'cause_variable': 'j', 'effect_variable': 'y'}),
+            Example('j = x + z\ny = x + z', 'j = x + z + x\ny = x + z',
+                    operator_args={'cause_variable': 'x', 'effect_variable': 'j'}),
         )
 

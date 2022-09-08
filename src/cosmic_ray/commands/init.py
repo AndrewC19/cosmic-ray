@@ -19,17 +19,17 @@ def _all_work_items(module_paths, operator_cfgs) -> Iterable[WorkItem]:
 
         for operator_cfg in operator_cfgs:
             operator_name = operator_cfg["name"]
-            if "args" not in operator_cfg:
-                operator_args = [{}]
-            else:
-                operator_args = operator_cfg["args"]
+            operator_args = operator_cfg.get('args', [{}])
 
             for args in operator_args:
                 try:
                     operator = get_operator(operator_name)(**args)
                 except TypeError:
-                    # Operator can't be loaded because it requires args, try next type
-                    continue
+                    if not args:
+                        continue
+                    else:
+                        raise Exception(
+                            f"Operator arguments {args} could not be assigned to {operator_name}.")
                 else:
                     positions = (
                         (start_pos, end_pos)
