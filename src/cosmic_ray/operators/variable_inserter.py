@@ -16,12 +16,10 @@ class VariableInserter(Operator):
     def mutation_positions(self, node):
         """Find expressions or terms that define the effect variable. These nodes can be
            mutated to introduce an effect of the cause variable.
-
-           We assume our expressions are wrapped in log(abs()) e.g. Y = log(abs(X1 + X2))
         """
-        if isinstance(node, PythonNode) and (node.type == "trailer") and (node.parent.type == "atom_expr"):
+        if isinstance(node, PythonNode) and (node.type == "arith_expr" or node.type == "term"):
 
-            if node.get_previous_sibling().value == 'abs':  # We only want to mutate the LHS once
+            if node.get_previous_sibling() == '=':  # We only want to mutate the LHS once
                 expr_node = node.search_ancestor('expr_stmt')
                 if expr_node:
                     effect_variable_names = [v.value for v in expr_node.get_defined_names()]
@@ -33,18 +31,14 @@ class VariableInserter(Operator):
     def mutate(self, node, index):
         """Join the node with cause variable using a randomly sampled arithmetic operator."""
         assert isinstance(node, PythonNode)
-        assert (node.type == "trailer")
-        arith_operator = random.choice(['+', '*', '-', '/'])
-        l_bracket_start_pos = node.start_pos
+        assert (node.type == "arith_expr" or node.type == "term")
+
+        arith_operator = random.choice(['+', '-'])
         arith_operator_node_start_pos = self._iterate_col(node.end_pos)
         cause_node_start_pos = self._iterate_col(arith_operator_node_start_pos)
         arith_operator_node = parso.python.tree.Operator(arith_operator, start_pos=arith_operator_node_start_pos)
         cause_node = Name(self.cause_variable, start_pos=cause_node_start_pos)
-        r_bracket_start_pos = self._iterate_col(cause_node.end_pos)
-        replacement_node = parso.python.tree.PythonNode("trailer",
-                                                        [parso.python.tree.Operator("(", l_bracket_start_pos),
-                                                         node, arith_operator_node, cause_node,
-                                                         parso.python.tree.Operator(")", r_bracket_start_pos)])
+        replacement_node = parso.python.tree.PythonNode("arith_expr", [node, arith_operator_node, cause_node])
         return replacement_node
 
     def _get_causes_from_expr_node(self, expr_node):
@@ -76,4 +70,3 @@ class VariableInserter(Operator):
             Example('j = x + z\ny = x + z', 'j = x + z + x\ny = x + z',
                     operator_args={'cause_variable': 'x', 'effect_variable': 'j'}),
         )
-
