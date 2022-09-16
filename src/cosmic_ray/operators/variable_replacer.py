@@ -33,7 +33,6 @@ class VariableReplacer(Operator):
                 named_causes = [cause.value for cause in causes]
                 named_effects = [effect.value for effect in effects]
                 if (self.effect_variable in named_effects) and (self.cause_variable in named_causes):
-                    print(f"{self.cause_variable} --> {self.effect_variable}")
                     yield node.start_pos, node.end_pos
 
     def mutate(self, node, index):
@@ -52,9 +51,7 @@ class VariableReplacer(Operator):
         simultaneously with a randomly sampled numeric constant.
         """
         assert isinstance(node, PythonNode) and node.type == "suite", "Error: Node is not a suite."
-        print("PRE-MUTATION CODE: ", node.get_code())
         no_causes_node = self._replace_causes_in_suite(node)
-        print("POST-MUTATION CODE: ", no_causes_node.get_code())
         return no_causes_node
 
     def _replace_causes_in_suite(self, node):
@@ -151,8 +148,6 @@ class VariableReplacer(Operator):
     def _replace_named_variable_in_expr(self, node, variable_name):
         if isinstance(node, Leaf):
             if node.value == variable_name:
-                print(node)
-                print(node.start_pos, node.end_pos)
                 return Number(start_pos=node.start_pos, value=str(randint(-100, 100)), prefix=' ')
             else:
                 return node
