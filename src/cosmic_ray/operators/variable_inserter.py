@@ -35,21 +35,12 @@ class VariableInserter(Operator):
                 named_causes = [cause.value for cause in causes]
                 named_effects = [effect.value for effect in effects]
                 if (self.effect_variable in named_effects) and (self.cause_variable not in named_causes):
-                    print(f"{self.cause_variable} _||_ {self.effect_variable}")
                     yield node.start_pos, node.end_pos
 
     def mutate(self, node, index):
         """Join the node with cause variable using a randomly sampled arithmetic operator."""
         assert isinstance(node, PythonNode) and node.type == "suite", "Error: node is not a suite."
-        print("PRE-MUTATION: ", node.get_code())
         node_with_causes = self._add_causes_to_suite(node)
-        print("POST-MUTATION: ", node_with_causes.get_code())
-        # arith_operator = random.choice(['+', '-'])
-        # arith_operator_node_start_pos = self._iterate_col(node.end_pos)
-        # cause_node_start_pos = self._iterate_col(arith_operator_node_start_pos)
-        # arith_operator_node = parso.python.tree.Operator(arith_operator, start_pos=arith_operator_node_start_pos)
-        # cause_node = Name(self.cause_variable, start_pos=cause_node_start_pos)
-        # replacement_node = parso.python.tree.PythonNode("arith_expr", [node, arith_operator_node, cause_node])
         return node_with_causes
 
     def _get_cause_and_effect_nodes_from_suite_node(self, suite_node):
